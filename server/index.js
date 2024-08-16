@@ -1,19 +1,24 @@
 const http = require('http');
 
-function getTimestamp() {
-    return new Date().toISOString();
-}
+let cache = null;
+let lastUpdateTime = 0;
+const REVALIDATE_INTERVAL = 30000; // 1 minute
 
-const server = http.createServer((req, res) => {
+http.createServer((req, res) => {
     if (req.url === '/') {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ timestamp: getTimestamp() }));
-    } else {
-        res.writeHead(404, { 'Content-Type': 'text/plain' });
-        res.end('Not Found');
-    }
-});
+        const now = Date.now();
 
-server.listen(3000, () => {
-    console.log('Server running at http://localhost:3000/');
+        if (!cache || (now - lastUpdateTime) > REVALIDATE_INTERVAL) {
+            cache = { timestamp: new Date().toISOString() };
+            lastUpdateTime = now;
+        }
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(cache));
+    } else {
+        res.writeHead(404);
+        res.end();
+    }
+}).listen(3000, () => {
+    console.log('Server running on http://localhost:3000');
 });
